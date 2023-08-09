@@ -1,0 +1,8 @@
+# order of execution matters
+# config map must be in cluster before deployment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-configmap
+data:
+  db_host: mongodb-service

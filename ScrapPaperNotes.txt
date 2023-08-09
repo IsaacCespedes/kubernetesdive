@@ -1,0 +1,174 @@
+Yaml Cfg
+Helm - Pkg mgr
+Kubectl - cmd line tool
+
+k8s supports physical, virtual, cloud, or hybrid
+microservice arch without self-made scripts
+
+high avail, scalable, disaster recovery
+
+Node - phys or virtual machine, each node receives an IP within a range (e.g. 10.2.2.x)
+
+Pod - smallest unit in K8s, container abstraction, tech agnostic (e.g. Docker or other)
+mostly 1 app container per pod
+each pod gets its own IP
+pods are ephmeral and IP gets lost
+
+Service- perm, stable IP and port for pod, routed via cfg'd selectors and targetPorts, also has load balancing
+external services are exposed, internal services are not
+clusterIP - (default, internal)
+headless - direct communication (e.g. db replication), finds IP via dns lookup, cfg'd with "clusterIp: None"
+NodePort - supports external traffic
+LoadBalancer - extension of nodeport
+
+Ingress - forwards to services, enables names for addresses (e.g. cool.com vs 123.2.2.1),
+requires ingress controller pod to manage redirections and act as cluster entrypoint for domain
+(there are many 3rd party controllers, and official k8s ingress controller)
+Consider env for ingress. e.g. cloud load balancer, bare metal entrypoint cfg
+
+
+ConfigMap - for service names, env variables, etc.
+Secrets - for credentials, passwords, stored in base64 to ensure text format (not by default)
+both become accessible to apps as env vars or properties file
+Volume - data persistence (hard drive: db or file, via cloud service or nfs, or over 25 types supported)
+could be external  or internal , not managed by k8s,
+so it should almost always be external
+Configured to the pods via PersistentVolumeClaim on a PersistentVolume (cfg'd manually) or a StorageClass (automatically allocated upon PV Claim)
+
+Pod blueprints - deployments, stateful sets
+Deployments - describe state of pods (e.g. # of replicas), for stateless apps
+Stateful sets - describe stateful apps and dbs, via persistent volumes (dbs are usualy mgd externally)
+the differences are that stateful sets have numbered prefixes instead of hashes in names, and fixed, individual DNS names. 
+They also designate a leader pod for writes and followers are read-only
+
+Replica sets - sits between deployment and pod, mgs pod replicas, not worked with directly
+
+Worker nodes (or nodes) do the actual work. They have:
+- container runtime (e.g. docker),
+- kubelet which schedules pods, and interfaces with pod and node,
+- kube proxy for interpod comms (intelligent fwding)
+
+You interact with cluster via Master Node, which has:
+API server, accessible via UI, API, or kubectl (most powerful)
+cluster gateway,
+authentication (single cluster entry point),
+scheduler (intelligent pod selection for resource allocation),
+controller mgr (detects state changes),
+etcd - key value store of cluster state
+
+In practice, multiple master nodes are created, and api server is load balanced
+
+Namespaces
+organizes resources, virtual cluster inside of cluster
+`kubectl get namespaces`
+dashboard NS is minikube specific
+system is not touched
+public is is publicly accessible
+node lease has avail nodes avail, known via heartbeat data
+default has the resources you create
+`kubectl create namespace <my-namespace>` (or via namespace cfg file)
+use cases:
+resource grouping (e.g. db, monitoring, elastic stack, nginx-ingress)
+multiple teams avoiding conflicts
+hosting staging and development env while sharing common resource clusters (nginx, elastic)
+blue / green deployment, both may use the same common resources clusters
+access and resource limits for teams, by namespaces
+
+namespace access: each namespace will need its own config map and secret to access the same cluster (e.g. shared db),
+however they can share the same service port [ex cfg line:  db_url: mysql-service.database (name.namespace)]
+volumes and nodes are not scoped to namespaces, they live globally in the cluster
+`kubectl api-resources --namespaced=false`
+
+`kubectl get configmap -n <my-namespace>`
+`kubectl apply -f <configmap file> --namespace=my-namespace`
+(it can also be configured in cfg file with namespace key under name in metadata block)
+
+kubens / kubectx tool can be installed to set default namespaces
+`kubens` - lists namespace
+`kubens my-namespace` - to switch namespaces
+
+minikube will setup a cluster locally
+it needs virtualization/ hypervisor (e.g. virtualbox or hyperkit)
+
+`brew update`
+`brew install hyperkit`
+`brew install minikube` (installs kubectl as dep., has docker integrated)
+
+cmds
+kubectl - to cfg cluster
+`minikube start --vm-drivers=hyperkit`
+`kubectl get nodes`
+`.. .. pod` - (pod id fmt is ,deployment id - replicaset id - pod id>)
+`.. .. services`
+`.. .. endpoints`  ((shows service pod endpoints))
+`kubectl get replicaset`
+`minikube status`
+`kubectl version`
+`kubectl create deployment nginx-depl --image=nginx`
+(here, nginx-depl is the name you assign)
+
+you create deployments, not pods or replica sets
+
+`kubectl edit deployment nginx-depl`
+
+
+`kubectl logs [pod name]`
+
+`kubectl describe [pod|service] [name]`
+
+to get root terminal access:
+`kubectl exec -it [pod bame] -- bin/bash`
+
+`kubectl delete deployment [depl name]`
+
+`kubectl apply -f [cfg file]`
+k8s will know how to update the cluster based on cfg edits
+`kubectl delete -f [cfg file, for service, deployment, secret...]`
+
+`kubectl get pod -o wide [--watch]`
+
+`kubectl get deployment nginx-deployment -o yaml`
+(shows deployment yaml with status block)
+
+`kubectl get all`
+
+
+`kubectl get secret`
+
+order of execution matters
+config map must be in cluster before deployment
+
+
+`minikube service mongo-express-service`
+
+`minikube addons enable ingress`
+
+helm -
+package manager
+packages are called helm charts 
+helm install <chart name>
+helm search <keyword>
+helm hub, helms, helm charts pages, or other repos
+
+templating engine
+allows you to create a blueprint with placeholders out of k8s cfg files
+avoids duplication of similar cfgs
+values.yaml
+
+useful in build process, and to create different cluster envs (e.g. dev, stage, prod)
+
+helm chart directory structure
+mychart/
+  chart.yaml - metadata about chart
+values.yaml - values for template files
+chars/ - chart dependencies
+templates/ - actual templates
+
+value merging of default and custom value files is possible
+`helm install --values=my-values.yaml <chartname>`
+or single values
+`heml install --set version=2.0.0`
+
+release management
+client (cli)
+server (tiller) -h holds history of cfgs, supports rollbacks, removed from helm 3

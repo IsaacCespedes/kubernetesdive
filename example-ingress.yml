@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: myapp-ingress
+spec:
+  # routing rules
+  rules:
+  - host: myapp.com
+    # this is the forwarding protocol, not part of the url
+    http:
+      # path (e.g. /api/v1) to route to backend service (e.g. myapp-service)
+      paths:
+        - backend:
+            serviceName: myapp-internal-service
+            servicePort: 80

@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: dashboard-ingress
+  namespace: kubernetes-dashboard # same as service and pod
+spec:
+  # routing rules
+  rules:
+  # you can have multiple hosts, with different subdomains (e.g. api.dashboard.com, app.dashboard.com)
+  # for https, you need to have a tls section
+  # tls:
+  # - hosts:
+  #   - dashboard.com
+  #   secretName: dashboard-secret # this is the name of the secret that contains the certificate
+  # secret and ingress must be in the same namespace
+  # see format at the bottom of this file
+  - host: dashboard.com
+    # this is the forwarding protocol, not part of the url
+    http:
+      # path (e.g. /api/v1) to route to backend service (e.g. myapp-service)
+      paths:
+        # - path: /api/v1
+          # backend:
+            # serviceName: myapp-service
+            # servicePort: 80
+        - backend:
+            # name of service to forward to
+            # kubectl get services -n kubernetes-dashboard
+            # clusterip is the default service type, internal to the cluster
+            # ingress address should be mapped in /etc/hosts
+            serviceName: kubernetes-dashboard
+            servicePort: 80
+
+# ---
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: mysecret-tls
+#   namespace: default
+# data:
+#   tls.crt: base64 encoded cert #file contents, not path
+#   tls.key: base64 encoded key
+# type: kubereneted.io/tls
